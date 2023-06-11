@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 from model_train import Model, createModel # import the model class
 import pickle # import here the library to load your trained model
+from TwitterScraper import getTweets
 
 app = Flask(__name__)
 
@@ -22,11 +23,12 @@ def predict():
     # Process the input data and make predictions using your model
     # Modify the code below according to the requirements of your model
     # Example: Assuming the input data is a list of features
-    sentences = data['sentences']
-    predictions = model.predict(sentences)
+    tweets = getTweets(data["query"], max = 10)
+    tweetContent = [tweet[2] for tweet in tweets]
+    predictions = model.predict(tweetContent)
 
     # Return the predictions as a JSON response
-    response = {'predictions': predictions}
+    response = {'predictions': predictions, 'tweet_Content' : tweetContent}
     return jsonify(response)
 
 if __name__ == '__main__':
