@@ -24,11 +24,21 @@ def predict():
     # Modify the code below according to the requirements of your model
     # Example: Assuming the input data is a list of features
     tweets = getTweets(data["query"], max = 10)
-    tweetContent = [tweet[2] for tweet in tweets]
-    predictions = model.predict(tweetContent)
 
+    usernames = [tweet['username'] for tweet in tweets]
+    dates = [tweet['date'] for tweet in tweets]
+    contents = [tweet['content'] for tweet in tweets]
+
+    predictions = model.predict(contents)
+
+    # Prepare Response data
+    response = [{'username': usernames[i],
+                'date': dates[i],
+                'content' : contents[i],
+                'prediction': predictions[i]}
+                for i in range(len(predictions))]
+    
     # Return the predictions as a JSON response
-    response = {'predictions': predictions, 'tweet_Content' : tweetContent}
     return jsonify(response)
 
 if __name__ == '__main__':

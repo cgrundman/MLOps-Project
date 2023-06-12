@@ -5,9 +5,14 @@ def getTweets(query, max = 1000):
     for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query = query).get_items()):
         if i>max:
             break
-        tweets.append([tweet.user.username, tweet.date, tweet.content,
-                       tweet.likeCount, tweet.retweetCount, tweet.replyCount,
-                       tweet.lang, tweet.sourceLabel])
+        tweets.append({"username" : tweet.user.username,
+                       "date" : tweet.date,
+                       "content" : tweet.content,
+                       "likeCount" : tweet.likeCount,
+                       "retweetCount" : tweet.retweetCount,
+                       "replyCount" : tweet.replyCount,
+                       "lang" : tweet.lang,
+                       "sourceLabel" : tweet.sourceLabel})
         
     return tweets
 
