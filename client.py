@@ -9,7 +9,13 @@ server_url = 'http://raspberrypi:5000/predict'
 
 # Example input data: Modify this according to the input format expected by your model
 query = input("Query: ")
-data = {'query': query}
+query = query
+
+# Advanced Search Filters
+since = "2023-06-06"
+until = "2023-06-08"
+
+data = {'query': query, 'until' : until, 'since' : since}
 
 # Send the request to the server
 response = requests.post(server_url, json=data)
