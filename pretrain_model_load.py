@@ -3,10 +3,10 @@ from transformers import AutoModel, AutoTokenizer
 import torch
 import os
 
-
 # Define the model repo
 model_name = "prajjwal1/bert-tiny"
 
+# TODO ensure that model is loaded correctly
 # Download pytorch model
 model = AutoModel.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)

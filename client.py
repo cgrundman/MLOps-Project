@@ -5,7 +5,7 @@ def query_and_date(query, start_date, end_date):
     # Set the URL of the server
     # If running on raspberry pi replace <RASPBERRY_PI_IP_ADDRESS> with the actual IP address
     #server_url = 'http://raspberrypi:5000/predict'
-    server_url = 'http://0.0.0.1:5000/predict'
+    server_url = 'http://127.0.0.1:5000/predict'
 
     data = {'query': query, 'since': start_date, 'until': end_date}
 
