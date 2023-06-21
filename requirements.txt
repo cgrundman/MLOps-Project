@@ -3,3 +3,10 @@ Pillow==9.5.0
 tk
 transformers
 torch==2.0.1
+PyPDF2
+docx
+Flask==2.1.2
+git+https://github.com/JustAnotherArchivist/snscrape.git
+requests==2.27.1
+tkcalendar 
+re
