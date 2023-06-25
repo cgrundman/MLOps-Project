@@ -243,7 +243,10 @@ def select_language():
 
 # Create a gauge with average sentiment score:
 def create_gauge(canvas, avg_score):
-    #Convert average score to angle (radians)
+    # Remove the canvas for every new search
+    canvas.delete('all')
+
+    # Convert average score to angle (radians)
     angle = math.radians(180 * avg_score)
 
     # Calculate coordinates of the arrow endpoint
@@ -269,8 +272,9 @@ def create_gauge(canvas, avg_score):
 
 
     # Draw the arrow
-    canvas.create_line(canvas.winfo_width() / 2, canvas.winfo_height() / 2, 
-                       arrow_x, arrow_y, width=2, arrow=tk.FIRST) # show arrow towards avg
+    if avg_score != 0:
+        canvas.create_line(canvas.winfo_width() / 2, canvas.winfo_height() / 2, 
+                        arrow_x, arrow_y, width=2, arrow=tk.FIRST) # show arrow towards avg
 
     # Display the average score
     canvas.create_text(canvas.winfo_width() / 2, canvas.winfo_height() / 2 - 50, 
