@@ -4,14 +4,17 @@ from PIL import ImageTk, Image
 import customtkinter
 from tkcalendar import Calendar
 import requests
-from client import query_and_date
 import re
+from client import query_and_date # from client.py
+import datetime # Time tracking
+import math
+
 
 customtkinter.set_appearance_mode("light")
 customtkinter.set_default_color_theme("blue")
 
 app = customtkinter.CTk()
-app.geometry("1200x1200")
+app.geometry("1200x1500")
 app.configure(bg='#dceaea')
 app.configure(highlightthickness=0)
 
@@ -20,17 +23,14 @@ app.update()
 org_height = app.winfo_height()
 org_width = app.winfo_width()
 
-start_cal = None
-end_cal = None
-
 def select_time():
-    global start_cal, end_cal, start_date, end_date
+    global start_cal, end_cal
 
     def select_date():
         start_date = start_cal.get_date()
         end_date = end_cal.get_date()
         selected_date.configure(text='Since {} Until {}'.format(start_date, end_date))
-        start_cal.destroy() # Remove calendar after time is selected
+        start_cal.destroy()  # Remove calendar after time is selected
         end_cal.destroy()
         select_button.destroy()
 
@@ -44,17 +44,25 @@ def select_time():
 
 def analysis_click():
     # Retrieve the query from the input box
-    query = input.get('1.0', tk.END).strip()
+    query = input.get('1.0', tk.END).strip() # 1.0 represents 1st character of 1st line
+                                             # tk.END ending position of text
 
     # Reset the analysis button text to "Analysis"
     analysis_button.configure(text='Analysis', command=analysis_click)
 
     # Print the query and perform analysis
     print(f"Query: {query}")
-    analysis_retrieve(query)
+    #analysis_retrieve(query)
+
+    # Display average score in the gauge
+    avg_score = analysis_retrieve(query)
+    create_gauge(canvas, avg_score)
+
     print("Analysis Done!")
 
+
 def analysis_retrieve(query):
+    global start_cal, end_cal
     # Retrieve the query from the input box
     query = input.get('1.0', tk.END).strip()
 
@@ -62,14 +70,16 @@ def analysis_retrieve(query):
     start_date = start_cal.get_date()
     end_date = end_cal.get_date()
 
+    start = datetime.datetime.now()
+
     # Call the query_and_date function with the query, start_date, and end_date
     query_and_date(query, start_date, end_date)
-    top3, low3, top3_contents, low3_contents = query_and_date(query, start_date, end_date)
+    top, low, top_contents, low_contents, avg_score = query_and_date(query, start_date, end_date)
 
     # Create Table widget (Treeview):
-    global top3_tree, low3_tree
-    top3_tree = ttk.Treeview(app, columns=('Score', 'Content'), show='headings')
-    low3_tree = ttk.Treeview(app, columns=('Score', 'Content'), show='headings')
+    global top_tree, low_tree
+    top_tree = ttk.Treeview(app, columns=('Score', 'User', 'Content'), show='headings')
+    low_tree = ttk.Treeview(app, columns=('Score', 'User', 'Content'), show='headings')
 
     # Set style and font for score and content
     style = ttk.Style()
@@ -77,59 +87,58 @@ def analysis_retrieve(query):
     style.configure('Treeview.Heading', font=('Helvetica', 12, 'bold'))
     
     # Headings
-    top3_tree.heading('Score', text='Highest Score')
-    top3_tree.heading('Content', text='Content')
-    low3_tree.heading('Score', text='Lowest Score')
-    low3_tree.heading('Content', text='Content')
+    top_tree.heading('Score', text='High Score')
+    top_tree.heading('User', text='User')
+    top_tree.heading('Content', text='Content')
+    low_tree.heading('Score', text='Low Score')
+    low_tree.heading('User', text='User')
+    low_tree.heading('Content', text='Content')
 
     # Widths
-    top3_tree.column('Score', width=30)
-    top3_tree.column('Content', width=500)
-    low3_tree.column('Score', width=30)
-    low3_tree.column('Content', width=500)
+    top_tree.column('Score', width=30)
+    top_tree.column('User', width=30)
+    top_tree.column('Content', width=500)
+    low_tree.column('Score', width=30)
+    low_tree.column('User', width=30)
+    low_tree.column('Content', width=500)
 
     # Location
-    top3_tree.place(relx=0.05, rely=0.62, relwidth=0.4, relheight=0.2)
-    low3_tree.place(relx=0.55, rely=0.62, relwidth=0.4, relheight=0.2)
+    top_tree.place(relx=0.05, rely=0.65, relwidth=0.4, relheight=0.2)
+    low_tree.place(relx=0.55, rely=0.65, relwidth=0.4, relheight=0.2)
 
-    # Clear existing tables:
-    top3_tree.delete(*top3_tree.get_children())
-    low3_tree.delete(*top3_tree.get_children())
+    # Hide existing tables before showing the result
+    top_tree.delete(*top_tree.get_children()) # get_children: get items
+    low_tree.delete(*top_tree.get_children())
 
     # Display 5 highest and 5 lowest
-    for i, score in enumerate(top3[:3]):
+    for i, score in enumerate(top[:5]):
         score_value = round(float(score['prediction']),3)
+        user = score['username']
 
         # Constraint the length of the content and continue in newline if it exceeds the length
-        content = top3_contents[i]
+        content = top_contents[i]
         content = remove_info(content)  # Remove links and mentions
         if len(content) > 100:
             content = '\n'.join([content[i:i+100] for i in range(0, len(content), 100)])
         # Insert contents
-        top3_tree.insert('', 'end', values=(f'{score_value:.3f}', content))
+        top_tree.insert('', 'end', values=(f'{score_value:.3f}', user, content))
 
 
-    for i, score in enumerate(low3[:3]):
-        score_value = round(float(score['prediction']),3)        
-        content = low3_contents[i]
+    for i, score in enumerate(low[:5]):
+        score_value = round(float(score['prediction']),3)
+        user = score['username']    
+        content = low_contents[i]
         content = remove_info(content)  # Remove links and mentions
         if len(content) > 100:
             content = '\n'.join([content[i:i+100] for i in range(0, len(content), 100)])
         
-        low3_tree.insert('', 'end', values=(f'{score_value:.3f}', content))
-
-    # Create scrollbars for the Content column
-    top3_content_scrollbar = ttk.Scrollbar(app, orient='horizontal', command=top3_tree.xview)
-    low3_content_scrollbar = ttk.Scrollbar(app, orient='horizontal', command=low3_tree.xview)
-
-    # Configure scrollbars
-    top3_tree.configure(xscrollcommand=top3_content_scrollbar.set)
-    low3_tree.configure(xscrollcommand=low3_content_scrollbar.set)
-
-    # Set the scrollbar width and height
-    top3_content_scrollbar.place(in_=top3_tree, relx=0, rely=1, relwidth=1, anchor=tk.SW)
-    low3_content_scrollbar.place(in_=low3_tree, relx=0, rely=1, relwidth=1, anchor=tk.SW) 
-
+        low_tree.insert('', 'end', values=(f'{score_value:.3f}', user, content))
+    
+    end = datetime.datetime.now()
+    duration = end - start
+    print(f"Duration: {duration.seconds//3600} hour, {(duration.seconds % 3600)//60} minutes,{duration.seconds%60} seconds")
+    return avg_score
+ 
 def remove_info(content):
     # Remove links
     content = re.sub(r'http\S+|www\S+', '', content)
@@ -152,6 +161,7 @@ def button2_click():
 def close():
     app.destroy()
 
+
 # Create Images:
 height = 200
 width = 200
@@ -171,7 +181,7 @@ rp_label.place(relx=0.9, rely=0.5, anchor=tk.CENTER)
 
 # Create Frame on top (under SENTIMENT Text)
 frame = tk.Frame(app, width=org_width, height=344, bg='#ABCDCD')
-frame.pack_propagate(0)
+frame.pack_propagate()
 frame.pack(side='top', anchor=tk.CENTER)
 bg_label = tk.Label(frame, image=bg_photo, background='#ABCDCD')
 bg_label.place(relx=1, rely=0, anchor=tk.NE)
@@ -183,8 +193,8 @@ analysis_button = customtkinter.CTkButton(master=app, text='Analysis', fg_color=
 close_button = customtkinter.CTkButton(master=app, text='Close', fg_color="#b01003", command=close)
 
 calendar_button.place(relx=0.265, rely=0.55, anchor=tk.W)
-analysis_button.place(relx=0.68, rely=0.55, anchor=tk.CENTER)
-close_button.place(relx=0.9, rely=0.9, anchor=tk.CENTER)
+analysis_button.place(relx=0.68, rely=0.6, anchor=tk.CENTER)
+close_button.place(relx=0.9, rely=0.95, anchor=tk.CENTER)
 
 # Create text:
 header_label = tk.Label(app, text='SENTIMENT ANALYSIS', font=('Helvetica', 48, 'bold'), 
@@ -204,7 +214,7 @@ input_text = tk.Label(app, text='What are you searching for?', font=('Helvetica'
                      fg='#1f3333', bg='#ebebeb')
 input_text.place(relx=0.265, rely=0.42, anchor=tk.W)
 
-selected_date = tk.Label(app, text='Date Range: ', font=('Helvetica', 15),
+selected_date = tk.Label(app, text='Date Range in yyyy-mm-dd', font=('Helvetica', 15),
                        fg='#1f3333', bg='#ebebeb')
 selected_date.place(relx=0.38, rely=0.55, anchor=tk.W)
 
@@ -214,5 +224,63 @@ file_label.place(relx=0.38, rely=0.49, anchor=tk.W)
 
 input = tk.Text(app, width=60, height=2, font=('Helvetica', 20))
 input.place(relx=0.5, rely=0.48, anchor=tk.CENTER)
+
+# Craete advanced filter for languages
+languages = ['English', 'German', 'French', 'Spanish', 'Italian', 'Chinese', 'Japanese',
+             'Russian', 'Korean', 'Vietnamese']
+languages.sort() # sort names in asc
+
+selected_languages = tk.StringVar()
+filter_language = ttk.Combobox(app, values=languages, textvariable=selected_languages,
+                               font=('Helvetica', 10))
+filter_language.place(relx=0.69, rely=0.55, anchor=tk.CENTER)
+
+label_language = ttk.Label(text='Language: ', font=('Helvetica', 15))
+label_language.place(relx=0.615, rely=0.55, anchor=tk.CENTER)
+
+def select_language():
+    chosen_language = select_language.get() # callback the value of language selected
+
+# Create a gauge with average sentiment score:
+def create_gauge(canvas, avg_score):
+    #Convert average score to angle (radians)
+    angle = math.radians(180 * avg_score)
+
+    # Calculate coordinates of the arrow endpoint
+    arrow_length = 100
+    '''
+    winfo_width()/2: set in center
+    arrow_length * math.cos(angle):horizontal offset (x) of the endpoint based on the angle
+    arrow_y with -30: distance from the canvas bottom
+
+    arc shape: portion of a circle
+    (50,50) top left corner, (250, 250) bottom right corner
+    '''
+    arrow_x = canvas.winfo_width() / 2 + arrow_length * math.cos(angle)
+    arrow_y = canvas.winfo_width() - 25
+
+    # Draw the gauge line with the corresponding color
+    canvas.create_arc(50, 50, 250, 250, start=0, extent=60, style='arc', 
+                      outline='#59B16E', width=20) # green
+    canvas.create_arc(50, 50, 250, 250, start=60, extent=60, style='arc', 
+                      outline='#FFD21E', width=20) # yellow
+    canvas.create_arc(50, 50, 250, 250, start=120, extent=60, style='arc', 
+                      outline='#C74B56', width=20) # red
+
+
+    # Draw the arrow
+    canvas.create_line(canvas.winfo_width() / 2, canvas.winfo_height() / 2, 
+                       arrow_x, arrow_y, width=2, arrow=tk.FIRST) # show arrow towards avg
+
+    # Display the average score
+    canvas.create_text(canvas.winfo_width() / 2, canvas.winfo_height() / 2 - 50, 
+                       text=f"Average Score: {avg_score:.2f}")
+
+canvas = tk.Canvas(app, width=300, height=150, bg='#EBEBEB', 
+                   highlightthickness=0) # thickness=0 transparent
+canvas.place(relx=0.5, rely=0.9, anchor=tk.CENTER)
+
+
+
 
 app.mainloop()
