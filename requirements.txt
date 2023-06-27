@@ -1,8 +1,6 @@
 customtkinter
-Pillow==9.5.0
 tk
 transformers
-torch==2.0.1
 PyPDF2
 docx
 Flask==2.1.2
