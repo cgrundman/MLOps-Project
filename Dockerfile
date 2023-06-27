@@ -5,7 +5,7 @@ RUN apt-get update && \
     apt-get install -y git && \
     pip install git+https://github.com/JustAnotherArchivist/snscrape.git && \
     pip install Flask==2.1.2 && \
-    pip install requests==2.27.1 && \
+    pip install requests==2.27.1
 
 EXPOSE 5000
 
